@@ -792,8 +792,13 @@ export default function Index() {
           </SectionReveal>
 
           <SectionReveal delay={100}>
-            <div className="bg-brand-card border border-white/5 rounded-2xl p-6 md:p-8">
-              <RegistrationForm />
+            <div className="rounded-2xl overflow-hidden border border-white/5" style={{ height: 700 }}>
+              <iframe
+                src="https://forms.fleet.yandex.ru/forms?ref_id=4c96a8f6e9af49858fd472ee15375c0d"
+                className="w-full h-full border-0"
+                title="Регистрация курьера"
+                allow="camera; microphone"
+              />
             </div>
           </SectionReveal>
         </div>
