@@ -166,14 +166,374 @@ function Calculator() {
   );
 }
 
-export default function Index() {
-  const [formData, setFormData] = useState({ name: "", phone: "", city: "" });
-  const [submitted, setSubmitted] = useState(false);
+const TRANSPORT_OPTIONS = [
+  { value: "bicycle", label: "Велосипед", emoji: "🚲" },
+  { value: "scooter", label: "Самокат", emoji: "🛴" },
+  { value: "moped", label: "Мопед", emoji: "🛵" },
+  { value: "car", label: "Автомобиль", emoji: "🚗" },
+  { value: "foot", label: "Пешком", emoji: "🚶" },
+];
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitted(true);
+const ZONE_OPTIONS = [
+  { value: "center", label: "Центр", desc: "Высокий спрос" },
+  { value: "middle", label: "Средний район", desc: "Стабильный поток" },
+  { value: "suburb", label: "Пригород", desc: "Меньше конкуренции" },
+];
+
+const SCHEDULE_OPTIONS = [
+  { value: "morning", label: "Утро", time: "7:00–13:00", emoji: "🌅" },
+  { value: "day", label: "День", time: "13:00–19:00", emoji: "☀️" },
+  { value: "evening", label: "Вечер", time: "19:00–01:00", emoji: "🌆" },
+  { value: "night", label: "Ночь", time: "01:00–07:00", emoji: "🌙" },
+];
+
+type RegistrationData = {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  birthYear: string;
+  transport: string;
+  zone: string;
+  schedule: string[];
+  hoursPerWeek: string;
+  hasPassport: boolean;
+  agreeTerms: boolean;
+};
+
+const STEPS = [
+  { label: "О себе", icon: "User" },
+  { label: "Работа", icon: "Briefcase" },
+  { label: "Документы", icon: "FileCheck" },
+];
+
+function RegistrationForm() {
+  const [step, setStep] = useState(0);
+  const [animDir, setAnimDir] = useState<"forward" | "back">("forward");
+  const [animating, setAnimating] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [data, setData] = useState<RegistrationData>({
+    name: "", phone: "", email: "", city: "", birthYear: "",
+    transport: "", zone: "", schedule: [], hoursPerWeek: "20",
+    hasPassport: false, agreeTerms: false,
+  });
+
+  const goNext = () => {
+    setAnimDir("forward");
+    setAnimating(true);
+    setTimeout(() => { setStep(s => s + 1); setAnimating(false); }, 250);
   };
+  const goBack = () => {
+    setAnimDir("back");
+    setAnimating(true);
+    setTimeout(() => { setStep(s => s - 1); setAnimating(false); }, 250);
+  };
+
+  const toggleSchedule = (val: string) => {
+    setData(d => ({
+      ...d,
+      schedule: d.schedule.includes(val) ? d.schedule.filter(s => s !== val) : [...d.schedule, val],
+    }));
+  };
+
+  const inputClass = "w-full bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/25 focus:outline-none focus:border-brand-orange transition-colors text-sm";
+  const labelClass = "text-white/55 text-xs mb-1.5 block font-golos uppercase tracking-wide";
+
+  const canProceedStep0 = data.name.trim() && data.phone.trim() && data.city.trim();
+  const canProceedStep1 = data.transport && data.zone && data.schedule.length > 0;
+  const canProceedStep2 = data.hasPassport && data.agreeTerms;
+
+  const slideStyle: React.CSSProperties = {
+    opacity: animating ? 0 : 1,
+    transform: animating
+      ? `translateX(${animDir === "forward" ? "30px" : "-30px"})`
+      : "translateX(0)",
+    transition: "opacity 0.25s ease, transform 0.25s ease",
+  };
+
+  if (submitted) {
+    return (
+      <div className="text-center py-8">
+        <div className="relative inline-flex mb-6">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-brand-orange to-brand-yellow flex items-center justify-center animate-glow-pulse">
+            <Icon name="CheckCircle" size={44} className="text-white" />
+          </div>
+          <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-brand-yellow flex items-center justify-center text-sm">🎉</div>
+        </div>
+        <h3 className="font-oswald text-3xl font-bold text-white mb-2">Регистрация завершена!</h3>
+        <p className="text-white/55 mb-6 text-sm leading-relaxed max-w-sm mx-auto">
+          Привет, <span className="text-brand-orange font-semibold">{data.name}</span>! Твоя заявка принята.<br />
+          Мы позвоним на <span className="text-white">{data.phone}</span> в течение 60 минут.
+        </p>
+        <div className="grid grid-cols-3 gap-3 max-w-xs mx-auto mb-6">
+          {[
+            { label: "Транспорт", val: TRANSPORT_OPTIONS.find(t => t.value === data.transport)?.emoji || "—" },
+            { label: "Район", val: ZONE_OPTIONS.find(z => z.value === data.zone)?.label.split(" ")[0] || "—" },
+            { label: "Смен", val: data.schedule.length + " вида" },
+          ].map(item => (
+            <div key={item.label} className="bg-brand-surface rounded-xl p-3 border border-white/5">
+              <div className="text-xl mb-1">{item.val}</div>
+              <div className="text-white/40 text-xs">{item.label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="inline-flex items-center gap-2 bg-brand-orange/15 border border-brand-orange/30 rounded-full px-5 py-2 text-brand-orange text-sm">
+          <Icon name="Clock" size={14} />
+          Ожидай звонка — мы уже готовим твой профиль
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Step indicators */}
+      <div className="flex items-center mb-8">
+        {STEPS.map((s, i) => (
+          <div key={s.label} className="flex items-center flex-1">
+            <div className="flex flex-col items-center">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
+                i < step ? "bg-brand-orange border-brand-orange" :
+                i === step ? "border-brand-orange bg-brand-orange/15" :
+                "border-white/15 bg-transparent"
+              }`}>
+                {i < step
+                  ? <Icon name="Check" size={16} className="text-white" />
+                  : <Icon name={s.icon as "User"} size={16} className={i === step ? "text-brand-orange" : "text-white/30"} />
+                }
+              </div>
+              <span className={`text-xs mt-1 font-golos transition-colors ${i === step ? "text-brand-orange" : i < step ? "text-white/50" : "text-white/20"}`}>
+                {s.label}
+              </span>
+            </div>
+            {i < STEPS.length - 1 && (
+              <div className="flex-1 h-px mx-2 mb-4 transition-all duration-500" style={{
+                background: i < step
+                  ? "linear-gradient(90deg, #FF6B00, #FF6B00)"
+                  : "rgba(255,255,255,0.1)"
+              }} />
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div className="h-1 bg-white/5 rounded-full mb-7 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-brand-orange to-brand-yellow transition-all duration-500"
+          style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+        />
+      </div>
+
+      <div style={slideStyle}>
+        {/* STEP 0: Personal */}
+        {step === 0 && (
+          <div className="space-y-4">
+            <div>
+              <label className={labelClass}>Полное имя *</label>
+              <input type="text" className={inputClass} placeholder="Иван Петров"
+                value={data.name} onChange={e => setData({ ...data, name: e.target.value })} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Телефон *</label>
+                <input type="tel" className={inputClass} placeholder="+7 (999) 000-00-00"
+                  value={data.phone} onChange={e => setData({ ...data, phone: e.target.value })} />
+              </div>
+              <div>
+                <label className={labelClass}>Год рождения</label>
+                <input type="number" className={inputClass} placeholder="2000"
+                  min={1950} max={2007}
+                  value={data.birthYear} onChange={e => setData({ ...data, birthYear: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Email</label>
+              <input type="email" className={inputClass} placeholder="ivan@mail.ru"
+                value={data.email} onChange={e => setData({ ...data, email: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelClass}>Город *</label>
+              <input type="text" className={inputClass} placeholder="Москва"
+                value={data.city} onChange={e => setData({ ...data, city: e.target.value })} />
+            </div>
+          </div>
+        )}
+
+        {/* STEP 1: Work preferences */}
+        {step === 1 && (
+          <div className="space-y-5">
+            <div>
+              <label className={labelClass}>Транспорт *</label>
+              <div className="grid grid-cols-5 gap-2">
+                {TRANSPORT_OPTIONS.map(t => (
+                  <button
+                    key={t.value} type="button"
+                    onClick={() => setData({ ...data, transport: t.value })}
+                    className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all duration-200 ${
+                      data.transport === t.value
+                        ? "border-brand-orange bg-brand-orange/15 scale-105"
+                        : "border-white/10 bg-[#1a1a1a] hover:border-white/25"
+                    }`}
+                  >
+                    <span className="text-2xl">{t.emoji}</span>
+                    <span className={`text-xs font-golos ${data.transport === t.value ? "text-brand-orange" : "text-white/50"}`}>{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Предпочтительная зона *</label>
+              <div className="space-y-2">
+                {ZONE_OPTIONS.map(z => (
+                  <button
+                    key={z.value} type="button"
+                    onClick={() => setData({ ...data, zone: z.value })}
+                    className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ${
+                      data.zone === z.value
+                        ? "border-brand-orange bg-brand-orange/10"
+                        : "border-white/10 bg-[#1a1a1a] hover:border-white/20"
+                    }`}
+                  >
+                    <span className={`font-medium text-sm ${data.zone === z.value ? "text-white" : "text-white/70"}`}>{z.label}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-white/35 text-xs">{z.desc}</span>
+                      {data.zone === z.value && <Icon name="Check" size={14} className="text-brand-orange" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className={labelClass}>Удобное время работы * (можно несколько)</label>
+              <div className="grid grid-cols-2 gap-2">
+                {SCHEDULE_OPTIONS.map(s => (
+                  <button
+                    key={s.value} type="button"
+                    onClick={() => toggleSchedule(s.value)}
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 ${
+                      data.schedule.includes(s.value)
+                        ? "border-brand-orange bg-brand-orange/10"
+                        : "border-white/10 bg-[#1a1a1a] hover:border-white/20"
+                    }`}
+                  >
+                    <span className="text-xl">{s.emoji}</span>
+                    <div className="text-left">
+                      <div className={`text-sm font-medium ${data.schedule.includes(s.value) ? "text-white" : "text-white/60"}`}>{s.label}</div>
+                      <div className="text-xs text-white/30">{s.time}</div>
+                    </div>
+                    {data.schedule.includes(s.value) && <Icon name="Check" size={13} className="text-brand-orange ml-auto" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: Documents & agreement */}
+        {step === 2 && (
+          <div className="space-y-5">
+            <div className="bg-[#1a1a1a] rounded-2xl p-5 border border-white/5">
+              <h4 className="font-oswald text-base font-semibold text-white mb-3 flex items-center gap-2">
+                <Icon name="FileText" size={16} className="text-brand-orange" />
+                Необходимые документы
+              </h4>
+              <ul className="space-y-2">
+                {[
+                  { doc: "Паспорт РФ", required: true },
+                  { doc: "ИНН (при наличии)", required: false },
+                  { doc: "Банковская карта для выплат", required: true },
+                  { doc: "Права (для мопеда/авто)", required: false },
+                ].map(item => (
+                  <li key={item.doc} className="flex items-center gap-2 text-sm text-white/60">
+                    <Icon name={item.required ? "Circle" : "CircleDashed"} size={12}
+                      className={item.required ? "text-brand-orange" : "text-white/25"} />
+                    {item.doc}
+                    {item.required && <span className="text-brand-orange text-xs ml-auto">обязательно</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="bg-gradient-to-br from-brand-orange/10 to-transparent border border-brand-orange/20 rounded-2xl p-5">
+              <div className="flex items-start gap-3 mb-4">
+                <Icon name="Clock" size={20} className="text-brand-orange mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-white font-medium text-sm mb-1">Что происходит после подачи?</p>
+                  <p className="text-white/50 text-xs leading-relaxed">Менеджер позвонит в течение 60 минут, проверит документы онлайн и назначит удобное время для старта. Всё быстро!</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div
+                  onClick={() => setData({ ...data, hasPassport: !data.hasPassport })}
+                  className={`w-5 h-5 rounded-md border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    data.hasPassport ? "border-brand-orange bg-brand-orange" : "border-white/20 group-hover:border-white/40"
+                  }`}
+                >
+                  {data.hasPassport && <Icon name="Check" size={11} className="text-white" />}
+                </div>
+                <span className="text-white/60 text-sm leading-relaxed">
+                  У меня есть паспорт гражданина РФ и мне исполнилось 18 лет
+                </span>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <div
+                  onClick={() => setData({ ...data, agreeTerms: !data.agreeTerms })}
+                  className={`w-5 h-5 rounded-md border-2 flex-shrink-0 mt-0.5 flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    data.agreeTerms ? "border-brand-orange bg-brand-orange" : "border-white/20 group-hover:border-white/40"
+                  }`}
+                >
+                  {data.agreeTerms && <Icon name="Check" size={11} className="text-white" />}
+                </div>
+                <span className="text-white/60 text-sm leading-relaxed">
+                  Согласен с <span className="text-brand-orange underline cursor-pointer">условиями работы</span> и <span className="text-brand-orange underline cursor-pointer">политикой конфиденциальности</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation buttons */}
+      <div className="flex gap-3 mt-7">
+        {step > 0 && (
+          <button type="button" onClick={goBack}
+            className="flex-1 py-3.5 rounded-xl border border-white/15 text-white/60 hover:border-white/30 hover:text-white transition-all duration-200 font-oswald tracking-wide text-sm flex items-center justify-center gap-2">
+            <Icon name="ChevronLeft" size={16} />
+            Назад
+          </button>
+        )}
+        {step < STEPS.length - 1 ? (
+          <button type="button" onClick={goNext}
+            disabled={step === 0 ? !canProceedStep0 : !canProceedStep1}
+            className="flex-1 btn-primary py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none">
+            Продолжить
+            <Icon name="ChevronRight" size={16} />
+          </button>
+        ) : (
+          <button type="button" onClick={() => canProceedStep2 && setSubmitted(true)}
+            disabled={!canProceedStep2}
+            className="flex-1 btn-primary py-3.5 rounded-xl text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:transform-none disabled:hover:shadow-none">
+            Отправить заявку
+            <Icon name="Rocket" size={16} />
+          </button>
+        )}
+      </div>
+
+      <p className="text-white/20 text-xs text-center mt-3 font-golos">
+        Шаг {step + 1} из {STEPS.length} · Данные защищены и не передаются третьим лицам
+      </p>
+    </div>
+  );
+}
+
+export default function Index() {
 
   return (
     <div className="min-h-screen bg-brand-dark font-golos overflow-x-hidden">
@@ -420,69 +780,21 @@ export default function Index() {
         </div>
       </section>
 
-      {/* CONTACT FORM */}
+      {/* REGISTRATION FORM */}
       <section id="apply" className="py-20 px-4 bg-brand-card/40">
         <div className="max-w-2xl mx-auto">
           <SectionReveal className="text-center mb-10">
-            <p className="text-brand-orange font-oswald tracking-widest text-sm uppercase mb-2">Старт</p>
+            <p className="text-brand-orange font-oswald tracking-widest text-sm uppercase mb-2">Саморегистрация</p>
             <h2 className="font-oswald text-4xl md:text-5xl font-bold text-white mb-3">
-              ОСТАВЬ<br /><span className="gradient-text">ЗАЯВКУ</span>
+              СТАНЬ<br /><span className="gradient-text">КУРЬЕРОМ</span>
             </h2>
-            <p className="text-white/50">Заполни форму — перезвоним в течение 60 минут</p>
+            <p className="text-white/50">Три простых шага — и ты в команде</p>
           </SectionReveal>
 
           <SectionReveal delay={100}>
-            {submitted ? (
-              <div className="bg-brand-card border border-brand-orange/40 rounded-2xl p-10 text-center">
-                <div className="w-20 h-20 rounded-full bg-brand-orange/20 flex items-center justify-center mx-auto mb-5">
-                  <Icon name="CheckCircle" size={40} className="text-brand-orange" />
-                </div>
-                <h3 className="font-oswald text-2xl font-bold text-white mb-2">Заявка принята!</h3>
-                <p className="text-white/60">Наш менеджер свяжется с тобой в течение часа. Готовься к первым заработкам! 🚀</p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="bg-brand-card border border-white/5 rounded-2xl p-6 md:p-8 space-y-4">
-                <div>
-                  <label className="text-white/60 text-sm mb-2 block font-golos">Имя *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Как тебя зовут?"
-                    value={formData.name}
-                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-brand-orange transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-white/60 text-sm mb-2 block font-golos">Телефон *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="+7 (___) ___-__-__"
-                    value={formData.phone}
-                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-brand-orange transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="text-white/60 text-sm mb-2 block font-golos">Город</label>
-                  <input
-                    type="text"
-                    placeholder="Москва"
-                    value={formData.city}
-                    onChange={e => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full bg-brand-surface border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-brand-orange transition-colors"
-                  />
-                </div>
-                <button type="submit" className="btn-primary w-full py-4 rounded-xl text-base flex items-center justify-center gap-2 mt-2">
-                  Отправить заявку
-                  <Icon name="Send" size={18} />
-                </button>
-                <p className="text-white/25 text-xs text-center font-golos">
-                  Нажимая кнопку, вы соглашаетесь с обработкой персональных данных
-                </p>
-              </form>
-            )}
+            <div className="bg-brand-card border border-white/5 rounded-2xl p-6 md:p-8">
+              <RegistrationForm />
+            </div>
           </SectionReveal>
         </div>
       </section>
